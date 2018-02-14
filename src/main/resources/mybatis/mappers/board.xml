@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board">
+
+	<resultMap type="com.javaex.vo.BoardVo" id="resultMapList">
+		<result column="no" property="no" />
+		<result column="title" property="title" />
+		<result column="content" property="content" />
+		<result column="hit" property="hit" /> <!-- column이 db변수이름, property가 vo변수이름 -->
+		<result column="reg_date" property="regDate" /> <!-- db변수이름을 vo변수이름으로 변경 -->
+		<result column="user_no" property="userNo" />
+		<result column="name" property="name" />
+	</resultMap>
+
+	<select id="selectList" resultMap="resultMapList">
+		<![CDATA[
+			select bo.no,
+				   title,
+				   content,
+				   us.name,
+				   hit,
+				   to_char(bo.reg_date, 'YYYY-MM-DD HH:MI') reg_date, 
+				   user_no
+		     from board bo, users us
+		     where bo.user_no = us.no
+		     order by bo.no desc
+		]]>
+	</select>
+
+	<select id="selectforView" resultMap="resultMapList">
+		<![CDATA[
+			select no, 
+				   title,
+				   content,
+				   hit, 
+				   reg_date, 
+				   user_no
+		     from board
+		     where no=#{no}
+		]]>
+	</select>
+
+	<update id="updateHit" parameterType="int">
+		<![CDATA[
+			update board 
+			set hit=hit+1
+			where no=#{no}
+		]]>
+	</update>
+
+	<delete id="delete" parameterType="com.javaex.vo.BoardVo">
+		<![CDATA[
+			delete from board
+			where no=#{no}
+			and user_no=#{userNo} 
+		]]> <!-- db변수이름, vo변수이름 잘 봐둘 것 -->
+	</delete>
+
+	<insert id="insert" parameterType="com.javaex.vo.BoardVo">
+		<![CDATA[
+			insert into board
+			values (seq_board_no.nextval, #{title}, #{content}, 0, sysdate, #{userNo})
+		]]>
+	</insert>
+
+	<select id="selectforModify" parameterType="int" resultType="com.javaex.vo.BoardVo"> <!-- int를 입력받아, boardVo로 출력 -->
+		<![CDATA[
+			select no, 
+				   title, 
+				   content,
+				   hit, 
+				   reg_date "regDate",  
+				   user_no "userNo"
+		     from board
+		     where no=#{no}
+		]]> <!-- resultMap 안해주고 resultType을 사용한다면, 별명을 그냥 입력해주면 된다. -->
+	</select>
+
+	<update id="update" parameterType="com.javaex.vo.BoardVo">
+		<![CDATA[
+			update board 
+		   	set title=#{title}, content=#{content}
+		 	where no=#{no}
+		  	and user_no=#{userNo}
+		]]>
+	</update>
+
+	<select id="search" parameterType="string" resultType="com.javaex.vo.BoardVo">
+		<![CDATA[
+			select bo.no no, 
+					title, 
+					content, 
+					hit, 
+			   		to_char(reg_date, 'YY-MM-DD HH:MM') "regDate", 
+			   		user_no "userNo",
+			   		name
+			from board bo, users us 
+			where bo.user_no = us.no 
+			and title like #{kwd}
+			order by bo.no desc
+		]]> <!-- 세미콜론 지우는 것 꼭 확인 -->
+	</select>
+	
+	<select id="totalCount" parameterType="String" resultType="int">
+		<![CDATA[
+			select count(*)
+			from board
+		]]> <!-- jstl이 아니라는 것을 알려주기 위한 것 -->
+        	<if test="_parameter!=null and _parameter!=''">
+                where title like '%'||#{_parameter}||'%'
+            </if> <!-- int면 like다음에  '%'||${kwd}||'%' 와도 되지만, String 하나이므로, kwd를 _parameter로 바꿔준다. -->
+       <![CDATA[
+		]]> <!-- kwd가 있을때는 그것만 가지고 카운트를 할 수 있도록 해야함. -->
+	</select>
+	
+	<select id="selectPage" parameterType="map" resultType="com.javaex.vo.BoardVo">
+		<![CDATA[
+			select rn,
+       				no,
+       				title,
+       				hit,
+       				to_char(reg_date, 'YYYY-MM-DD HH:MI') regDate,
+       				user_no userNo,
+       				name
+			from (select ROWNUM rn,
+                				no,
+                				title,
+                				hit,
+                				reg_date,
+                				user_no,
+                				name
+        			from (select bo.no,
+                    			bo.title,
+                    			bo.hit,
+                    			bo.reg_date,
+                    			bo.user_no,
+                    			us.name
+                			from board bo, users us
+                			where bo.user_no=us.no
+                			]]> <!-- jstl이 아니라는 것을 알려주기 위한 것 -->
+                			<if test="kwd!=null and kwd!=''">
+                				and title like '%'||#{kwd}||'%'
+                			</if>
+                			<![CDATA[
+                			order by no desc) o) t
+			where rn > #{startRnum}
+			and rn <= #{endRnum}
+		]]> <!-- 세미콜론 지우는 것 꼭 확인 -->
+	</select> <!-- 페이징을 다 한뒤, 검색기능을 쿼리문에 추가해준다. -->
+	<!-- if문을 써주어, kwd와 동일한지 -->
+	
+	
+</mapper>

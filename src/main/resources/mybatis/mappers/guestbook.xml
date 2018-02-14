@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="guestbook">
+
+	<resultMap type="com.javaex.vo.GuestbookVo" id="resultMapList">
+		<result column="no" property="no" />
+		<result column="name" property="name" />
+		<result column="password" property="password" />
+		<result column="content" property="content" />
+		<result column="reg_date" property="regDate" /> <!-- db변수이름을 vo변수이름으로 변경 -->
+	</resultMap>
+	
+	<select id="getList" resultMap="resultMapList"> <!-- db에서 값을 가져오겠다 -->
+		<![CDATA[ 
+			select no, name, password, content, reg_date
+			from guestbook
+			order by no desc
+        ]]> <!-- 쿼리문을 태그가 아니라 문자열로만 봐달라 -->
+	</select>
+
+	<insert id="insert" parameterType="com.javaex.vo.GuestbookVo"> <!-- parameterType은 입력받는 값으로 클래스이름을 적어줌. -->
+		<![CDATA[ 
+			insert into guestbook
+			values (seq_guestbook_no.nextval, #{name}, #{password}, #{content}, sysdate)
+		]]> <!-- 이전에 쓰던 물음표(?) 대신에 Vo의 멤버변수로 이름을 적어준다. -->
+	</insert>
+	
+	<delete id="delete" parameterType="map"> <!-- 하나씩 받을 때는 parameterType=int, String 이런식으로 써줘도 됨 -->
+		<![CDATA[ 
+			delete from guestbook
+			where no=#{no} and password=#{password}
+		]]>
+	</delete>
+	
+	<select id="selectListPage" parameterType="int" resultType="com.javaex.vo.GuestbookVo">
+		<![CDATA[
+			select r.rn,
+        			no,
+        			name,
+        			password,
+        			content,
+        			reg_date regDate
+			from (select rownum rn,
+                			no,
+                			name,
+                			password,
+                			content,
+                			reg_date 
+        			from (select no,
+                    			name,
+                    			password,
+                    			content,
+                    			reg_date 
+                			from guestbook
+                			order by reg_date desc) o) r
+			where rn>=((#{page}-1)*5)+1
+			and rn<=#{page}*5
+		]]>
+	</select>
+	
+	<insert id="insertAjax" parameterType="com.javaex.vo.GuestbookVo"> <!-- 값을 가져오기 이전에 값을 넣어주기 -->
+		<selectKey keyProperty="no" resultType="int" order="BEFORE">
+				select seq_guestbook_no.nextval from dual
+		</selectKey>
+		<![CDATA[
+			insert into guestbook
+			values (#{no}, #{name}, #{password}, #{content}, sysdate) 
+		]]>
+	</insert> <!-- guestbookVo에 no값이 들어가 있고, db에 추가 완료, insert는 db값은 가져오지 못함. -->
+	
+	<select id="selectListAjax" parameterType="int" resultType="com.javaex.vo.GuestbookVo">
+		<![CDATA[
+			select no,
+       			   name,
+       			   password,
+       			   content,
+       			   reg_date regDate
+			from guestbook
+			where no= #{no}
+		]]>
+	</select>
+
+	<delete id="deleteAjax" parameterType="com.javaex.vo.GuestbookVo">
+		<![CDATA[
+			delete from guestbook
+			where no=#{no} and password=#{password}
+		]]>
+	</delete>
+	
+</mapper>
